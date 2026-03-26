@@ -1,26 +1,27 @@
 var _ = require('underscore');
 var async = require('async');
+var compression = require('compression');
 var crc32 = require('buffer-crc32');
 var express = require('express');
 var fs = require('fs');
 var http = require('http');
 var logger = require('winston');
-var opt = require('optimist');
 var path = require('path');
 var send = require('send');
 var wrench = require('wrench');
 var zlib = require('zlib');
 
-var argv = require('optimist')
-	.describe('config', 'Location of the configuration file').default('config', './config.json')
-	.argv;
+var argv = require('minimist')(process.argv.slice(2), {
+	default: { config: './config.json' }
+});
 
 if (argv.h || argv.help) {
-	opt.showHelp();
-	return;
+	console.log('Usage: quakejs-content [--config <path>]');
+	console.log('  --config  Location of the configuration file (default: ./config.json)');
+	process.exit(0);
 }
 
-logger.cli();
+logger.add(new logger.transports.Console());
 logger.level = 'debug';
 
 var config = loadConfig(argv.config);
@@ -124,7 +125,7 @@ function handleAsset(req, res, next) {
 
 	logger.info('serving ' + relativePath + ' (crc32 ' + checksum + ') to ' + req.ip);
 
-	res.sendfile(absolutePath, { maxAge: Infinity });
+	send(req, absolutePath, { maxAge: Infinity }).pipe(res);
 }
 
 function loadConfig(configPath) {
@@ -150,7 +151,7 @@ function loadConfig(configPath) {
 		res.setHeader('Access-Control-Allow-Origin', '*');
 		next();
 	});
-	app.use(express.compress({ filter: function(req, res) { return true; } }));
+	app.use(compression());
 	app.get('/assets/manifest.json', handleManifest);
 	app.get(/^\/assets\/(.+\/|)(\d+)-(.+?)$/, handleAsset);
 

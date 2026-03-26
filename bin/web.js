@@ -2,19 +2,19 @@ var _ = require('underscore');
 var express = require('express');
 var http = require('http');
 var logger = require('winston');
-var opt = require('optimist');
 var path = require('path');
 
-var argv = require('optimist')
-	.describe('config', 'Location of the configuration file').default('config', './config.json')
-	.argv;
+var argv = require('minimist')(process.argv.slice(2), {
+	default: { config: './config.json' }
+});
 
 if (argv.h || argv.help) {
-	opt.showHelp();
-	return;
+	console.log('Usage: quakejs-web [--config <path>]');
+	console.log('  --config  Location of the configuration file (default: ./config.json)');
+	process.exit(0);
 }
 
-logger.cli();
+logger.add(new logger.transports.Console());
 logger.level = 'debug';
 
 var config = loadConfig(argv.config);

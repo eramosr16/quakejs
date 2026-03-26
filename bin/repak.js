@@ -4,7 +4,7 @@ var fs = require('fs');
 var logger = require('winston');
 var path = require('path');
 var exec = require('child_process').exec;
-var execSync = require('execSync').exec;
+var execSync = require('child_process').execSync;
 var os = require('os');
 var temp = require('temp');
 var wrench = require('wrench');
@@ -35,28 +35,24 @@ var whitelist = [
 	'ui/'
 ];
 
-logger.cli();
+logger.add(new logger.transports.Console());
 logger.level = 'debug';
 
-var argv = require('optimist')
-	.options({
-		'config': {
-			'description': 'Repak asset config script',
-			'default': path.join(__dirname, 'repak-config.json')
-		},
-		'src': {
-			'description': 'Source directory'
-		},
-		'dest': {
-			'description': 'Destination directory'
-		}
-	})
-	.demand(['src', 'dest'])
-	.argv;
+var argv = require('minimist')(process.argv.slice(2), {
+	default: { config: path.join(__dirname, 'repak-config.json') }
+});
 
 if (argv.h || argv.help) {
-	opt.showHelp();
-	return;
+	console.log('Usage: quakejs-repak --src <dir> --dest <dir> [--config <path>]');
+	console.log('  --config  Repak asset config script (default: repak-config.json)');
+	console.log('  --src     Source directory');
+	console.log('  --dest    Destination directory');
+	process.exit(0);
+}
+
+if (!argv.src || !argv.dest) {
+	console.error('Error: --src and --dest are required');
+	process.exit(1);
 }
 
 var src = argv.src;
@@ -144,7 +140,7 @@ function getPaks(root) {
 function extractPak(pak, dest) {
 	logger.info('extracting pak ' + pak);
 
-	execSync('unzip -o ' + pak + ' -d ' + dest);
+	execSync('unzip -o ' + pak + ' -d ' + dest, { stdio: 'inherit' });
 }
 
 function flattenPaks(paks) {
@@ -223,8 +219,9 @@ function transformFile(src) {
 	var dest = src.replace('.wav', '.opus');
 
 	// do the transform
-	var result = execSync('opusenc ' + src + ' ' + dest);
-	if (result.code) {
+	try {
+		execSync('opusenc ' + src + ' ' + dest, { stdio: 'inherit' });
+	} catch (e) {
 		logger.error('.. failed to opus encode ' + src);
 		return src;
 	}

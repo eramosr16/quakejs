@@ -1,21 +1,21 @@
 var _ = require('underscore');
 var http = require('http');
 var logger = require('winston');
-var opt = require('optimist');
 var url = require('url');
 var WebSocketClient = require('ws');
 var WebSocketServer = require('ws').Server;
 
-var argv = require('optimist')
-	.describe('config', 'Location of the configuration file').default('config', './config.json')
-	.argv;
+var argv = require('minimist')(process.argv.slice(2), {
+	default: { config: './config.json' }
+});
 
 if (argv.h || argv.help) {
-	opt.showHelp();
-	return;
+	console.log('Usage: quakejs-master [--config <path>]');
+	console.log('  --config  Location of the configuration file (default: ./config.json)');
+	process.exit(0);
 }
 
-logger.cli();
+logger.add(new logger.transports.Console());
 logger.level = 'debug';
 
 var config = loadConfig(argv.config);
@@ -237,33 +237,33 @@ function removeClient(conn) {
  * main
  *
  **********************************************************/
-function getRemoteAddress(ws) {
+function getRemoteAddress(ws, req) {
 	// by default, check the underlying socket's remote address
 	var address = ws._socket.remoteAddress;
 
 	// if this is an x-forwarded-for header (meaning the request
 	// has been proxied), use it
-	if (ws.upgradeReq.headers['x-forwarded-for']) {
-		address = ws.upgradeReq.headers['x-forwarded-for'];
+	if (req.headers['x-forwarded-for']) {
+		address = req.headers['x-forwarded-for'];
 	}
 
 	return address;
 }
 
-function getRemotePort(ws) {
+function getRemotePort(ws, req) {
 	var port = ws._socket.remotePort;
 
-	if (ws.upgradeReq.headers['x-forwarded-port']) {
-		port = ws.upgradeReq.headers['x-forwarded-port'];
+	if (req.headers['x-forwarded-port']) {
+		port = req.headers['x-forwarded-port'];
 	}
 
 	return port;
 }
 
-function connection(ws) {
+function connection(ws, req) {
 	this.socket = ws;
-	this.addr = getRemoteAddress(ws);
-	this.port = getRemotePort(ws);
+	this.addr = getRemoteAddress(ws, req);
+	this.port = getRemotePort(ws, req);
 }
 
 function loadConfig(configPath) {
@@ -289,12 +289,12 @@ function loadConfig(configPath) {
 		server: server
 	});
 
-	wss.on('connection', function (ws) {
-		var conn = new connection(ws);
+	wss.on('connection', function (ws, req) {
+		var conn = new connection(ws, req);
 		var first = true;
 
-		ws.on('message', function (buffer, flags) {
-			if (!flags.binary) {
+		ws.on('message', function (buffer, isBinary) {
+			if (!isBinary) {
 				return;
 			}
 
