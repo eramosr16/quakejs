@@ -1,0 +1,40 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8080:8080"
+    command: node bin/web.js --config /app/config/web.json
+    volumes:
+      - ./config/web.json:/app/config/web.json:ro
+    depends_on:
+      - content
+    networks:
+      - quakejs
+
+  content:
+    build: .
+    ports:
+      - "9000:9000"
+    command: node bin/content.js --config /app/config/content.json
+    volumes:
+      - ./config/content.json:/app/config/content.json:ro
+      - assets:/app/assets
+    networks:
+      - quakejs
+
+  master:
+    build: .
+    ports:
+      - "27950:27950"
+    command: node bin/master.js --config /app/config/master.json
+    volumes:
+      - ./config/master.json:/app/config/master.json:ro
+    networks:
+      - quakejs
+
+networks:
+  quakejs:
+    driver: bridge
+
+volumes:
+  assets:
