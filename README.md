@@ -7,11 +7,11 @@ To see a live demo, check out [http://www.quakejs.com](http://www.quakejs.com).
 
 ## Building binaries
 
-As a prerequisite, you'll need to have a working build of [Emscripten](http://github.com/kripken/emscripten), then:
+As a prerequisite, you'll need to have a working build of [Emscripten](http://github.com/kripken/emscripten) (via [emsdk](https://emscripten.org/docs/getting_started/downloads.html)), then:
 
 ```shell
 cd quakejs/ioq3
-make PLATFORM=js EMSCRIPTEN=<path_to_emscripten>
+make PLATFORM=js EMSCRIPTEN=
 ```
 
 Binaries will be placed in `ioq3/build/release-js-js/`.
